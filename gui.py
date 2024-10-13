@@ -66,17 +66,28 @@ image_height = 32
 # Initialize the GUI
 top = tk.Tk()
 top.geometry('900x650')
-top.title('Nhận dạng biển báo giao thông')
+top.minsize(900, 650)  # Đặt kích thước tối thiểu cho cửa sổ là 900x650
+top.title('010100086901-XỬ LÝ ẢNH VÀ THỊ GIÁC MÁY TÍNH-NHÓM 9')
 top.configure(background='#E8EAF6')
 
-# Heading label for the title of the application
-heading = Label(top, text="Nhận dạng biển báo giao thông", pady=20, font=('arial', 25, 'bold'))
+# Tạo tiêu đề chính và nhóm
+heading = Label(top, text="NHẬN DẠNG BIỂN BÁO GIAO THÔNG", pady=20, font=('arial', 25, 'bold'))
 heading.configure(background='#E8EAF6', foreground='#5E35B1')
 heading.pack()
+group_label = Label(top, text="NHÓM 9", pady=20, font=('arial', 25, 'bold'))
+group_label.configure(background='#E8EAF6', foreground='#5E35B1')
+group_label.pack()
 
-# Frame for displaying the uploaded image
-sign_image = Label(top, background='#E8EAF6', borderwidth=2, relief="groove", width=60, height=15)
+# Thêm nhãn "Hãy cho hình ảnh"
+instruction_label = Label(top, text="Hãy cho hình ảnh", pady=10, font=('arial', 18, 'bold'))
+instruction_label.configure(background='#E8EAF6', foreground='#FF0000')  # Màu chữ đỏ
+instruction_label.pack()
+
+
+# Frame for displaying the image
+sign_image = Label(top, background='#E8EAF6')
 sign_image.pack(pady=20)
+
 
 # Label for displaying classification result
 label = Label(top, background='#E8EAF6', font=('arial', 15, 'bold'))
@@ -133,18 +144,32 @@ def show_classify_button(file_path):
     classify_b.place(relx=0.79, rely=0.46)
 
 def update_blurred_image():
-    """
-    Update the displayed image with the current blur effect applied.
-    """
+    """Update the displayed image with the current blur level and size."""
     global uploaded_image
     if uploaded_image is not None:
-        resized_img = uploaded_image.copy()
-        resized_img = resized_img.resize((image_width, image_height))
+        # Giới hạn kích thước hình ảnh tối đa (ví dụ: 300x300)
+        max_width = 300
+        max_height = 300
+
+        # Lấy kích thước ban đầu của ảnh
+        width, height = uploaded_image.size
+
+        # Tính toán tỷ lệ để giữ nguyên tỷ lệ khung hình
+        ratio = min(max_width / width, max_height / height)
+        new_size = (int(width * ratio), int(height * ratio))
+
+        # Thay đổi kích thước ảnh
+        resized_img = uploaded_image.resize(new_size)
+
+        # Áp dụng mờ nếu cần
         if blur_level > 0:
             resized_img = resized_img.filter(ImageFilter.GaussianBlur(blur_level))
+
+        # Hiển thị ảnh đã thay đổi kích thước
         im = ImageTk.PhotoImage(resized_img)
         sign_image.configure(image=im)
         sign_image.image = im
+
 
 def upload_image():
     """
@@ -156,6 +181,8 @@ def upload_image():
         uploaded_image = Image.open(file_path)
         update_blurred_image()  # Display the uploaded image
         label.configure(text='')
+        # Cập nhật dòng chữ thành "Hình ảnh"
+        instruction_label.configure(text="Hình ảnh")
         show_classify_button(file_path)  # Show the 'Nhận dạng' button
     except Exception as e:
         print(e)
@@ -177,7 +204,7 @@ def show_results():
 
 def open_settings():
     """
-    Open the settings window to adjust image processing options such as blur level and image size.
+    Open the settings window to adjust image processing options such as blur level.
     """
     settings_window = tk.Toplevel(top)
     settings_window.title("Cài đặt")
@@ -185,25 +212,16 @@ def open_settings():
     settings_window.configure(background='#E8EAF6')
     Label(settings_window, text="Cài đặt hệ thống", font=('arial', 16)).pack(pady=20)
     
-    global blur_slider, width_slider, height_slider
+    global blur_slider
 
     # Blur level slider
     blur_slider = tk.Scale(settings_window, from_=0, to=10, orient="horizontal", label="Độ mờ (0-10)", length=300)
     blur_slider.set(blur_level)
     blur_slider.pack(pady=10)
 
-    # Image width slider
-    width_slider = tk.Scale(settings_window, from_=32, to=128, orient="horizontal", label="Chiều rộng ảnh", length=300)
-    width_slider.set(image_width)
-    width_slider.pack(pady=10)
-
-    # Image height slider
-    height_slider = tk.Scale(settings_window, from_=32, to=128, orient="horizontal", label="Chiều cao ảnh", length=300)
-    height_slider.set(image_height)
-    height_slider.pack(pady=10)
-
     save_button = Button(settings_window, text="Lưu cài đặt", command=save_settings)
     save_button.pack(pady=20)
+
 
 def save_settings():
     """
@@ -211,8 +229,6 @@ def save_settings():
     """
     global blur_level, image_width, image_height
     blur_level = blur_slider.get()
-    image_width = width_slider.get()
-    image_height = height_slider.get()
     with open("settings.txt", "w") as f:
         f.write(f"{blur_level}\n")
         f.write(f"{image_width}\n")
